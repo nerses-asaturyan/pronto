@@ -1,0 +1,6 @@
+{
+  "name": "notes-cli",
+  "version": "1.2.0",
+  "bin": { "notes": "cli.js" },
+  "engines": { "node": ">=18" }
+}

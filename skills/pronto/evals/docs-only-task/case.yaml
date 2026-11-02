@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: docs-only-task
+expected_outcome: |
+  A task card for a docs-only change whose checks test that docs/setup.md exists and has the install, configuration and troubleshooting parts, and whose done-when lines name the facts from cli.js. No file is changed; the planner waits for an OK.
+context:
+  scaffold_script: place-files.sh

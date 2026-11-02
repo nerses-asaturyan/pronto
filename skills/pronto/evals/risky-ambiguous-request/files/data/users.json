@@ -1,0 +1,7 @@
+[
+  { "id": 1, "name": "Ana", "lastLogin": "2026-10-30", "plan": "pro" },
+  { "id": 2, "name": "Ben", "lastLogin": "2024-02-11", "plan": "free" },
+  { "id": 3, "name": "Chen", "lastLogin": "2025-07-19", "plan": "pro" },
+  { "id": 4, "name": "Dara", "lastLogin": "2023-12-01", "plan": "free" },
+  { "id": 5, "name": "Eli", "lastLogin": "2026-06-05", "plan": "free" }
+]

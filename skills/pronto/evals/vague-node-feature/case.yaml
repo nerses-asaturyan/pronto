@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: vague-node-feature
+expected_outcome: |
+  A task card for the time-of-day greeting, with concrete done-when lines, the 12:00 and 18:00 edges, and a check that calls greet at fixed times. No code is changed; the planner waits for an OK.
+context:
+  scaffold_script: place-files.sh

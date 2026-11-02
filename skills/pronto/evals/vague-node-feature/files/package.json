@@ -1,0 +1,9 @@
+{
+  "name": "pronto-playground",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A tiny project for trying Pronto safely.",
+  "scripts": {
+    "test": "node --test"
+  }
+}
