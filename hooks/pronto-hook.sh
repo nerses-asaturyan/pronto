@@ -5,7 +5,8 @@
 #                          In a marked session, a background reviewer's report (it arrives as a prompt
 #                          in the Claude desktop app) records the verdict.
 #   pronto-hook.sh gate    Stop: in a marked session, run the saved checks, then require a review.
-#                          Every allowed stop writes .pronto/<slug>.result.md next to the card.
+#                          Every allowed stop writes .pronto/<slug>.result.md next to the card. When the
+#                          task ends, the card, the notes and the saved state are deleted.
 #   pronto-hook.sh review  SubagentStop: if the subagent is the reviewer, record its verdict
 # Any other session is left alone. Uses only bash, git, grep, sed, awk and date.
 set -u
@@ -109,6 +110,33 @@ record_verdict() {
   debug "${2:-verdict}" "verdict=$1"
 }
 
+# Keep .pronto/ out of git status and commits, with one line in the repo's local exclude file.
+hide_pronto() {
+  local common exclude
+  common="$(git -C "$1" rev-parse --path-format=absolute --git-common-dir 2> /dev/null)"
+  [ -n "$common" ] || return 0
+  exclude="$common/info/exclude"
+  grep -qxF '.pronto/' "$exclude" 2> /dev/null && return 0
+  mkdir -p "$common/info" || return 0
+  [ -s "$exclude" ] && [ -n "$(tail -c 1 "$exclude")" ] && printf '\n' >> "$exclude"
+  printf '.pronto/\n' >> "$exclude"
+  return 0
+}
+
+# A finished task leaves only its result file, which the planner deletes after it tells the user.
+# Notes may sit next to the card or, for a worker in a worktree, in the worktree's own .pronto/.
+clean_task() {
+  local card slug
+  card="$(cat "$state/cardpath" 2> /dev/null)"
+  slug="$(cat "$state/slug" 2> /dev/null)"
+  if [ -n "$card" ] && [ -n "$slug" ]; then
+    rm -f "$card" "$(dirname "$card")/$slug.notes.md" ".pronto/$slug.notes.md"
+    rmdir .pronto 2> /dev/null
+  fi
+  rm -rf "$state"
+  return 0
+}
+
 # Forget workers that have not been seen for KEEP_DAYS days.
 clean_old_state() {
   local d seen now
@@ -156,9 +184,10 @@ write_result() {
   return 0
 }
 
-# Allow the stop, tell the user, and keep the outcome in the result file.
+# Allow the stop, tell the user, and keep the outcome in the result file. A final outcome ends the task.
 finish_with() {
   write_result "$1" "$2"
+  case "$1" in ACCEPTED | "NOT DONE" | "NOT VERIFIED") clean_task ;; esac
   allow_with "$2"
 }
 
@@ -191,6 +220,7 @@ case "${1:-}" in
     [ -n "$card" ] || exit 0
 
     clean_old_state
+    hide_pronto "$(dirname "$(dirname "$card")")"
     mkdir -p "$state"
     printf '%s' "$slug" > "$state/slug"
     printf '%s' "$card" > "$state/cardpath"
@@ -253,11 +283,14 @@ case "${1:-}" in
 
     if [ "$reviewed" = "$fingerprint" ] && [ "$verdict" = REJECT ]; then
       rm -f "$state/review"
+      # The next review only checks the fixes, so it needs the work this review saw.
+      printf '%s' "$reviewed" > "$state/rejected-work"
       rejects=$(($(count rejects) + 1))
       printf '%s' "$rejects" > "$state/rejects"
       [ "$rejects" -ge "$MAX_TRIES" ] && { printf '0' > "$state/rejects"; finish_with "NOT DONE" "the reviewer rejected the work $MAX_TRIES times, so the worker was allowed to stop. The task is NOT done."; }
       block "pronto: the reviewer rejected the work (try $rejects of $MAX_TRIES)." \
-        "Fix every point in its reply, then stop again. Do not argue with the review."
+        "Fix each point under Problems in its reply, then stop again. Do not argue with the review." \
+        "Give the user no results yet: they are not accepted."
     fi
 
     # A review was asked for and may still be running in the background: wait for it without
@@ -270,11 +303,24 @@ case "${1:-}" in
     asks=$(($(count asks) + 1))
     printf '%s' "$asks" > "$state/asks"
     [ "$asks" -gt "$MAX_TRIES" ] && { printf '0' > "$state/asks"; finish_with "NOT VERIFIED" "the worker stopped without a review of its final work. The task is NOT verified."; }
+    # The checks just passed, so the reviewer need not run them. After an earlier review, it only checks
+    # what changed since the work that review saw, and the problems it raised.
+    focus=" Pronto already ran the card's $(grep -c . "$state/checks") check(s) on this exact work and they all passed, so do not run them again."
+    old="${reviewed:-$(cat "$state/rejected-work" 2> /dev/null)}"
+    if [ -n "$old" ] && [ -s "$state/review.txt" ]; then
+      focus+=" This is a re-review: the last review is in $(to_native "$state/review.txt"). Check only that each problem it raised is fixed"
+      if printf '%s\n%s\n' "$old" "$fingerprint" | grep -qvE '^[0-9a-f]{40,64}$'; then
+        focus+="."
+      else
+        focus+=", and look at what changed since then: git diff $old $fingerprint."
+      fi
+    fi
     block "pronto: checks passed. Before you finish, get the independent review of this exact work:" \
-      "- Use the Agent tool with subagent_type \"pronto:reviewer\" (if that name is not found, use \"reviewer\")." \
-      "- Run it in the foreground and wait for its answer, if your Agent tool lets you choose." \
-      "- Prompt: Review the Pronto task card at $(to_native "$state/card.md"). The project is $(to_native "$PWD"). Then add your own short summary of what you did and how you checked it, so the reviewer can check your claims." \
-      "- Do not change any file after the review starts. Then stop, and Pronto reads its verdict." \
+      "- Use the Agent tool with subagent_type \"pronto:reviewer\" (if that name is not found, use \"reviewer\"). Run it in the foreground if your Agent tool lets you choose." \
+      "- Prompt: Review the Pronto task card at $(to_native "$state/card.md"). The project is $(to_native "$PWD").$focus Then add your own short summary: what you did, and the claims the user will rely on, so the reviewer can check them." \
+      "- Do not change any file after the review starts." \
+      "- Until the reviewer accepts, give the user no results or summary, not even in a recap. If your turn ends while the review runs, say only that the review is running." \
+      "- Then stop, and Pronto reads its verdict." \
       "--- checks ---" "$report"
     ;;
 

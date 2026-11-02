@@ -35,6 +35,9 @@ check "the hand-back prompt's ACCEPT is saved" grep -qx ACCEPT "$W/s1/review"
 stop '[]'
 expect "the next stop is accepted" 0 "reviewer accepted the work"
 
+# The accepted task has ended, so start it again for the next cases.
+printf '[pronto worker: t1]\n## Checks\n```pronto-checks\ngrep -q hi greet.js\n```\n' > "$R/.pronto/t1.md"
+prompt s1 '[pronto worker: t1]\nDo it'
 prompt s1 "${HB}REJECT\n- missing test"
 stop '[]'
 expect "a hand-back REJECT blocks the stop" 2 "rejected the work (try 1 of 3)"

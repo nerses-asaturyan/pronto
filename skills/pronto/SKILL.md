@@ -32,7 +32,9 @@ Fill in [card-template.md](card-template.md). For the level of detail, see [exam
 - **Original request:** the user's words, copied word for word. The worker treats them as the final word when the rest of the card is unclear, so a paraphrase would quietly change the task.
 - **Scope:** make the request precise, but add no work the user did not ask for. Extra ideas go under "Not in this task", so the user sees them and the worker leaves them alone.
 - **Tags:** mark each limit and assumption (said), (guess) or (default), so the user knows which parts to check.
-- **Done when:** results someone can see or verify. The reviewer checks each line and rejects any line without evidence, so a vague line ("works well") either blocks the worker or means nothing.
+- **Done when:** results someone can see or verify. The reviewer spot-checks these lines and rejects one that is clearly not met, so a vague line ("works well") either blocks the worker or means nothing.
+  - Each line should take about a minute to check: by reading the result or the diff, or by running one command. A line like "no files from X exist anywhere on this machine" makes the reviewer search the whole disk for minutes.
+  - Keep the list as short as the request. A short report needs a few lines, not an audit plan.
 - **Base:** the commit and branch from the script. The reviewer compares the work against it.
 - **What, not how:** say what to do and when it is done. The worker reads the code with fresh eyes and may find a better way.
 
@@ -82,6 +84,14 @@ Save nothing yet, and start the worker only after a clear yes. A worker runs on 
 3. Tell the user in one or two lines:
    - where the card is saved;
    - that the worker can only finish after its checks pass and an independent review accepts the work;
-   - that the outcome will be written to `.pronto/<slug>.result.md`.
+   - that you will tell them the outcome once the review is done.
 
 Then stop. The work belongs to the worker.
+
+## 6. When the worker reports back
+
+The app may tell you each time the worker ends a turn, also while its review is still running. Before you say anything, read `.pronto/<slug>.result.md`, because the worker's own messages are not checked yet.
+
+- **No result file yet, or Status WAITING FOR REVIEW:** say at most one line, such as "The work is done and under review." Do not show its results: the review may still reject them.
+- **WAITING FOR YOU:** tell the user the worker has a question, and where to answer it.
+- **ACCEPTED, NOT DONE or NOT VERIFIED:** tell the user the outcome in a few lines: the status, where the result is (a file, a branch), and the reviewer's notes, if any. Then delete the result file, and the `.pronto` folder if it is now empty. Pronto has already deleted the card and notes, so nothing is left behind.

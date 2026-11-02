@@ -67,7 +67,8 @@ Safe defaults picked for you. If one turns out wrong, tell the user.
 ## How to work
 - Commit on a work branch, never on the main branch. If you are already on your own branch or worktree (for example one the app made for you), that is your work branch. Otherwise create `pronto/time-greeting`.
 - Read AGENTS.md or CLAUDE.md first if there is one. Open only the docs this task needs.
-- Keep short notes in `.pronto/time-greeting.notes.md`: current step, decisions and why, next action. Do not commit files in `.pronto/`.
+- Keep short notes in `.pronto/time-greeting.notes.md`: current step, decisions and why, next action. Do not commit files in `.pronto/`. Pronto deletes the card and notes when the task ends.
 - If the same error happens twice, stop and try a different approach. After 3 failed tries, stop and report what you tried.
 - If you are stuck or need the user, start your message with `[pronto waiting]`, ask your question, and stop.
-- When you think you are done, just stop. Pronto then runs the checks and asks for an independent review. Follow what it tells you.
+- When you think you are done, stop with one short line, such as "Done, ready for checks." Do not write your summary or final answer yet, and do not call the reviewer yourself. Pronto runs the checks, then tells you how to get the review.
+- Until the reviewer accepts, give no results, in messages or recaps. The session that started you reads them, and an unreviewed result may be wrong. While the review runs, say only that it is running. After it accepts, give your final answer, with the reviewer's notes if it has any.

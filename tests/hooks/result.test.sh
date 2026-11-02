@@ -21,18 +21,26 @@ has() { grep -qF -- "$1" "$RESULT"; }
 
 hook mark "$(printf '{"session_id":"w1","cwd":"%s","prompt":"[pronto worker: dm] go"}' "$WT")"
 expect "worker in a worktree starts" 0 "1 check(s) saved"
+EXCLUDE="$R/.git/info/exclude"
+check ".pronto/ is added to the repo's local exclude file" grep -qxF '.pronto/' "$EXCLUDE"
+check "so git status does not list .pronto in the main checkout" test -z "$(g status --porcelain)"
 
 hook gate "$(printf '{"session_id":"w1","cwd":"%s","last_assistant_message":"[pronto waiting] Which color?"}' "$WT")"
 expect "a worker asking the user may stop" 0
 check "the result file is written next to the card in the main checkout" test -f "$RESULT"
 check "and says it waits for you" has "Status: WAITING FOR YOU"
 check "no result file is written inside the worktree" test ! -f "$T/wt/.pronto/dm.result.md"
+check "waiting for you keeps the card" test -f "$R/.pronto/dm.md"
 
 echo dark >> "$T/wt/app.txt"
+mkdir -p "$T/wt/.pronto"
+echo "step 2" > "$T/wt/.pronto/dm.notes.md"
+echo "old notes" > "$R/.pronto/dm.notes.md"
 stop
 stop '[{"id":"a1"}]'
 expect "background review: the worker may wait" 0 "not verified yet"
 check "the result says it waits for the review" has "Status: WAITING FOR REVIEW"
+check "waiting for the review keeps the card and the state" test -f "$R/.pronto/dm.md" -a -d "$W/w1"
 
 # The desktop app's background reviewer ends with a SubagentHandback call; last_assistant_message has no verdict.
 printf '%s\n' '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_1","name":"SubagentHandback","input":{"message":"ACCEPT\n- Done when 1: app.txt line 2 says \"dark\""}}]}}' \
@@ -47,6 +55,16 @@ check "the result says ACCEPTED" has "Status: ACCEPTED"
 check "the result lists the passing check" has "PASS  grep -q dark app.txt"
 check "the result keeps the reviewer's report" has 'app.txt line 2 says "dark"'
 check "the result names the worker's branch" has "Branch: claude/dm"
+check "the card is deleted" test ! -f "$R/.pronto/dm.md"
+check "the notes next to the card are deleted" test ! -f "$R/.pronto/dm.notes.md"
+check "the notes in the worktree are deleted, with their empty folder" test ! -e "$T/wt/.pronto"
+check "the saved state is deleted" test ! -d "$W/w1"
+check "the worker's own work stays" grep -qx dark "$T/wt/app.txt"
+
+# Start the worker again for the verdict-reading cases below.
+printf '[pronto worker: dm]\n## Checks\n```pronto-checks\ngrep -q dark app.txt\n```\n' > "$R/.pronto/dm.md"
+hook mark "$(printf '{"session_id":"w1","cwd":"%s","prompt":"[pronto worker: dm] go"}' "$WT")"
+check "a second start does not add .pronto/ to the exclude file again" test "$(grep -cxF '.pronto/' "$EXCLUDE")" -eq 1
 
 rm -f "$W/w1/review"
 printf '%s\n' '{"type":"tool_use","name":"SubagentHandback","input":{"message":"REJECT\n- no test"}}' > "$T/agent-b2.jsonl"

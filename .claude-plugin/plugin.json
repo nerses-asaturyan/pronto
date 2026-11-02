@@ -1,6 +1,6 @@
 {
   "name": "pronto",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Turn a rough request into a clear task card, ask only the questions that matter, then hand it to a fresh Claude Code session that must pass its checks and an independent review.",
   "author": { "name": "Nerses Asaturyan" },
   "homepage": "https://github.com/nerses-asaturyan/pronto",
