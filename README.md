@@ -36,7 +36,14 @@ In Claude Code:
 
 Then type `/pronto` (or `/pronto:pronto` if another command already uses the name), or ask Claude to use Pronto. It works in every new session after the install.
 
-To update, run `/plugin marketplace update pronto`. To get updates by itself, open `/plugin`, go to Marketplaces, pick `pronto` and turn on auto-update.
+To update, run these two commands in a terminal:
+
+```
+claude plugin marketplace update pronto
+claude plugin update pronto@pronto
+```
+
+The first gets the latest list of releases, and the second installs the new version. Then start a new session: sessions that are already open keep the old version. To get updates by itself, open `/plugin`, go to Marketplaces, pick `pronto` and turn on auto-update.
 
 To try it without installing, clone this repo and run `claude --plugin-dir ./pronto` from the folder that contains it.
 
